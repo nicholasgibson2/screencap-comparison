@@ -10,6 +10,11 @@ def main():
     scaler = st.sidebar.selectbox("scaler:", ["DVDO VP-50Pro"])
 
     line_visibility = st.sidebar.checkbox("line divider", value=True)
+    comparison_mode = st.sidebar.radio("Comparison mode", ["Overlay", "Side by Side"])
+
+    image_height = st.sidebar.slider(
+        "Image Height", min_value=500, max_value=1000, value=600, step=10
+    )  # Height slider
 
     # screencap_url = "https://screencaps.blob.core.windows.net"
     screencap_url = "http://localhost:8000"
@@ -55,7 +60,7 @@ def main():
 
             #container {{
                 position: relative;
-                height: 90vh;
+                height: {image_height}px;
                 width: 100%;
                 overflow: hidden;
             }}
@@ -90,7 +95,16 @@ def main():
         <script>{my_js}</script>
     """
 
+    if comparison_mode == "Side by Side":
+        my_html = f"""
+            <div style="display: flex;">
+                <img style="width: 50%; height: {image_height}px;" src="{st.session_state['default_image']}" />
+                <img style="width: 50%; height: {image_height}px;" src="{screencap_url}/humanoid/nr.png" />
+            </div>
+        """
+
     html(my_html, height=600)
+
     img = image_select(
         label="",
         images=[

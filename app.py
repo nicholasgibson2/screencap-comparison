@@ -1,6 +1,5 @@
 import streamlit as st
 from streamlit.components.v1 import html
-from streamlit_image_select import image_select
 
 
 def main():
@@ -10,13 +9,7 @@ def main():
     scaler = st.sidebar.selectbox("scaler:", ["DVDO VP-50Pro"])
 
     line_visibility = st.sidebar.checkbox("line divider", value=True)
-    comparison_mode = st.sidebar.radio("Comparison mode", ["Overlay", "Side by Side"])
 
-    image_height = st.sidebar.slider(
-        "Image Height", min_value=500, max_value=1000, value=600, step=10
-    )  # Height slider
-
-    # screencap_url = "https://screencaps.blob.core.windows.net"
     screencap_url = "http://localhost:8000"
 
     if not line_visibility:
@@ -26,97 +19,125 @@ def main():
             "divider color", label_visibility="collapsed"
         )
 
-    # Define your javascript
     my_js = """
-        let img1 = document.getElementById('img1');
-        let img2 = document.getElementById('img2');
-        let container = document.getElementById('container');
-        let divider = document.getElementById('divider');
+    let img1 = document.getElementById('img1');
+    let img2 = document.getElementById('img2');
+    let container = document.getElementById('container');
+    let divider = document.getElementById('divider');
 
-        let slider = document.getElementById('slider');
+    let slider = document.getElementById('slider');
 
-        function updateImages() {
-            let slideValue = (slider.value / 100) * container.offsetWidth;
-            img2.style.clip = 'rect(0, ' + slideValue + 'px, ' + container.offsetHeight + 'px, 0)';
-            divider.style.left = slideValue + 'px';
+    function updateImages() {
+        let slideValue = (slider.value / 100) * container.offsetWidth;
+        img2.style.clip = 'rect(0, ' + slideValue + 'px, ' + container.offsetHeight + 'px, 0)';
+        divider.style.left = slideValue + 'px';
+    }
+
+    slider.oninput = updateImages;
+
+    updateImages();
+
+    function imageZoom(imgID, resultID) {
+        var img, lens, result, cx, cy;
+        img = document.getElementById(imgID);
+        result = document.getElementById(resultID);
+        lens = document.createElement("DIV");
+        lens.setAttribute("class", "img-zoom-lens");
+        img.parentElement.insertBefore(lens, img);
+        cx = result.offsetWidth / lens.offsetWidth;
+        cy = result.offsetHeight / lens.offsetHeight;
+        result.style.backgroundImage = "url('" + img.src + "')";
+        result.style.backgroundSize = (img.width * cx) + "px " + (img.height * cy) + "px";
+        lens.addEventListener("mousemove", moveLens);
+        img.addEventListener("mousemove", moveLens);
+        lens.addEventListener("touchmove", moveLens);
+        img.addEventListener("touchmove", moveLens);
+        function moveLens(e) {
+            var pos, x, y;
+            e.preventDefault();
+            pos = getCursorPos(e);
+            x = pos.x - (lens.offsetWidth / 2);
+            y = pos.y - (lens.offsetHeight / 2);
+            if (x > img.width - lens.offsetWidth) {x = img.width - lens.offsetWidth;}
+            if (x < 0) {x = 0;}
+            if (y > img.height - lens.offsetHeight) {y = img.height - lens.offsetHeight;}
+            if (y < 0) {y = 0;}
+            lens.style.left = x + "px";
+            lens.style.top = y + "px";
+            result.style.backgroundPosition = "-" + (x * cx) + "px -" + (y * cy) + "px";
         }
+        function getCursorPos(e) {
+            var a, x = 0, y = 0;
+            e = e || window.event;
+            a = img.getBoundingClientRect();
+            x = e.pageX - a.left;
+            y = e.pageY - a.top;
+            x = x - window.pageXOffset;
+            y = y - window.pageYOffset;
+            return {x : x, y : y};
+        }
+    }
 
-        slider.oninput = updateImages;
-
-        // Call the function when the page loads
-        updateImages();
+    imageZoom('img1', 'zoomResult1');
+    imageZoom('img2', 'zoomResult2');
     """
 
-    if "default_image" not in st.session_state:
-        st.session_state["default_image"] = f"{screencap_url}/humanoid/default.png"
-
-    # Prepare html code
     my_html = f"""
-        <style>
-            body {{
-                margin: 0;
-                padding: 0;
-            }}
+    <style>
+        #container {{
+            position: relative;
+            height: 300px;
+            width: 600px;
+            overflow: hidden;
+        }}
 
-            #container {{
-                position: relative;
-                height: {image_height}px;
-                width: 100%;
-                overflow: hidden;
-            }}
+        #img1, #img2 {{
+            position: absolute;
+            height: 300px;
+            width: 600px;
+        }}
 
-            #img1, #img2 {{
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }}
+        #divider {{
+            position: absolute;
+            height: 300px;
+            width: 2px;
+            background-color: {line_color};
+        }}
 
-            #divider {{
-                position: absolute;
-                top: 0;
-                height: 100%;
-                width: 1px;
-                background: {line_color};
-            }}
+        .img-zoom-lens {{
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-radius: 50%;
+            cursor: zoom-in;
+            width: 50px;
+            height: 50px;
+        }}
 
-            #img2 {{
-                clip: rect(0, 50%, 100%, 0);
-            }}
-        </style>
-        <div id="container">
-            <img id="img1" src="{st.session_state['default_image']}" />
-            <img id="img2" src="{screencap_url}/humanoid/nr.png" />
-            <div id="divider"></div>
+        .img-zoom-result {{
+            border: 1px solid #d4d4d4;
+            width: 200px;
+            height: 200px;
+            background-repeat: no-repeat;
+            position: fixed;
+            right: 30px;
+            top: 30px;
+        }}
+    </style>
+    <div id="container">
+        <div>
+            <img id="img1" src="{screencap_url}/humanoid/lx-900.png" />
+            <div id="zoomResult1" class="img-zoom-result"></div>
         </div>
-        <input id="slider" type="range" min="0" max="100" value="50" style="width: 100%;">
-        <script>{my_js}</script>
+        <div>
+            <img id="img2" src="{screencap_url}/humanoid/nr.png" />
+            <div id="zoomResult2" class="img-zoom-result"></div>
+        </div>
+        <div id="divider"></div>
+    </div>
+    <input id="slider" type="range" min="0" max="100" value="50" style="width: 100%;">
+    <script>{my_js}</script>
     """
-
-    if comparison_mode == "Side by Side":
-        my_html = f"""
-            <div style="display: flex;">
-                <img style="width: 50%; height: {image_height}px;" src="{st.session_state['default_image']}" />
-                <img style="width: 50%; height: {image_height}px;" src="{screencap_url}/humanoid/nr.png" />
-            </div>
-        """
-
     html(my_html, height=600)
-
-    img = image_select(
-        label="",
-        images=[
-            f"{screencap_url}/humanoid/default.png",
-            f"{screencap_url}/humanoid/nr.png",
-            f"{screencap_url}/humanoid/other.png",
-        ],
-    )
-
-    if st.session_state["default_image"] != img:
-        st.session_state["default_image"] = img
-        st.experimental_rerun()
 
 
 if __name__ == "__main__":
